@@ -47,8 +47,8 @@ def test_extract_brand_analysis_domain_prefers_brand_matching_evidence() -> None
     spotify = next(item for item in result if item.name == "Spotify")
     openai = next(item for item in result if item.name == "OpenAI")
 
-    assert spotify.domain == "spotify.com"
-    assert openai.domain == "openai.com"
+    assert spotify.domain == "https://spotify.com"
+    assert openai.domain == "https://openai.com"
 
 
 def test_extract_brand_analysis_filters_question_words() -> None:
@@ -66,7 +66,18 @@ def test_extract_brand_analysis_handles_missing_raw_text() -> None:
 
     openai = next(item for item in result if item.name == "OpenAI")
     assert openai.mentions_count == 1
-    assert openai.domain == "openai.com"
+    assert openai.domain == "https://openai.com"
+
+
+def test_extract_brand_analysis_prefers_brand_url_over_citation_domains() -> None:
+    answer = (
+        "Spotify [spotify.com] leads in discovery. "
+        "Comparisons often cite https://freeyourmusic.com/blog/best-music-streaming-platform "
+        "and https://www.pcmag.com/picks/the-best-online-music-streaming-services."
+    )
+
+    spotify = next(item for item in extract_brand_analysis(answer) if item.name == "Spotify")
+    assert spotify.domain == "https://spotify.com"
 
 
 def test_extract_brand_analysis_excludes_markdown_heading_titles() -> None:

@@ -25,7 +25,7 @@ def test_analysis_endpoint_returns_brand_structure() -> None:
 	openai = next(item for item in body["brands"] if item["name"] == "OpenAI")
 	assert openai["mentions_count"] == 2
 	assert "features" in openai["scopes"] or "pricing" in openai["scopes"]
-	assert openai["domain"] == "openai.com"
+	assert openai["domain"] == "https://openai.com"
 
 
 def test_analysis_endpoint_ignores_question_words_as_brands() -> None:
