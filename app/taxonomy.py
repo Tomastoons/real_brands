@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+import re
 
 SCOPE_TAXONOMY: dict[str, tuple[str, ...]] = {
 	"performance": (
@@ -81,13 +82,26 @@ SCOPE_TAXONOMY: dict[str, tuple[str, ...]] = {
 SCOPE_ORDER: tuple[str, ...] = tuple(SCOPE_TAXONOMY.keys())
 
 
+def _compile_keyword_pattern(keyword: str) -> re.Pattern[str]:
+	escaped = re.escape(keyword)
+	# Allow flexible whitespace for multi-word keywords like "market share".
+	escaped = escaped.replace(r"\ ", r"\s+")
+	return re.compile(rf"(?<!\w){escaped}(?!\w)", flags=re.IGNORECASE)
+
+
+SCOPE_TAXONOMY_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {
+	label: tuple(_compile_keyword_pattern(keyword) for keyword in keywords)
+	for label, keywords in SCOPE_TAXONOMY.items()
+}
+
+
 def get_scopes_from_contexts(contexts: Iterable[str]) -> list[str]:
 	matched: list[str] = []
-	lowered_contexts = [ctx.lower() for ctx in contexts]
+	context_list = list(contexts)
 
 	for label in SCOPE_ORDER:
-		keywords = SCOPE_TAXONOMY[label]
-		if any(keyword in context for context in lowered_contexts for keyword in keywords):
+		patterns = SCOPE_TAXONOMY_PATTERNS[label]
+		if any(pattern.search(context) for context in context_list for pattern in patterns):
 			matched.append(label)
 
 	return matched
