@@ -228,6 +228,17 @@ def _normalized_domain_from_url(url: str) -> str | None:
     return host or None
 
 
+def _normalized_base_url_from_url(url: str) -> str | None:
+    parsed = urlparse(url)
+    host = parsed.netloc.lower()
+    if host.startswith("www."):
+        host = host[4:]
+    if not host:
+        return None
+    scheme = parsed.scheme.lower() if parsed.scheme else "https"
+    return f"{scheme}://{host}"
+
+
 def _extract_domains_in_contexts(contexts: list[str]) -> list[str]:
     domains: list[str] = []
     seen: set[str] = set()
@@ -252,19 +263,21 @@ def _extract_domains_in_contexts(contexts: list[str]) -> list[str]:
     return domains
 
 
-def _extract_domain_mentions_with_offsets(text: str) -> list[tuple[str, int, int]]:
-    mentions: list[tuple[str, int, int]] = []
+def _extract_domain_mentions_with_offsets(text: str) -> list[tuple[str, str, int, int, str]]:
+    mentions: list[tuple[str, str, int, int, str]] = []
 
     for match in EXPLICIT_URL_PATTERN.finditer(text):
-        domain = _normalized_domain_from_url(match.group(0))
-        if domain:
-            mentions.append((domain, match.start(), match.end()))
+        raw_url = match.group(0).rstrip(".,;:!?)\"]")
+        domain = _normalized_domain_from_url(raw_url)
+        base_url = _normalized_base_url_from_url(raw_url)
+        if domain and base_url:
+            mentions.append((domain, base_url, match.start(), match.end(), "explicit"))
 
     for match in BRACKET_DOMAIN_PATTERN.finditer(text):
         domain = match.group(1).lower()
         if domain.startswith("www."):
             domain = domain[4:]
-        mentions.append((domain, match.start(1), match.end(1)))
+        mentions.append((domain, f"https://{domain}", match.start(1), match.end(1), "bracket"))
 
     return mentions
 
@@ -327,8 +340,10 @@ def _get_domain_for_brand(brand: str, text: str) -> str | None:
     brand_token_set = _brand_tokens(brand)
     domain_scores: Counter[str] = Counter()
     domain_hits: Counter[str] = Counter()
+    domain_best_url: dict[str, str] = {}
+    domain_best_mention_score: dict[str, int] = {}
 
-    for domain, dom_start, dom_end in domain_mentions:
+    for domain, base_url, dom_start, dom_end, source_kind in domain_mentions:
         overlap = len(brand_token_set & _domain_tokens(domain))
         score = 0
 
@@ -338,9 +353,9 @@ def _get_domain_for_brand(brand: str, text: str) -> str | None:
             distance = abs(brand_mid - domain_mid)
 
             if distance <= 80:
-                score += 4
+                score += 6
             elif distance <= 160:
-                score += 3
+                score += 4
             elif distance <= 300:
                 score += 2
             elif distance <= 600:
@@ -352,32 +367,38 @@ def _get_domain_for_brand(brand: str, text: str) -> str | None:
             # Strong positive signal when the domain is attached directly after a brand mention.
             between = text[brand_end:dom_start].strip()
             if dom_start >= brand_end and len(between) <= 2 and (between == "[" or between == "("):
-                score += 3
+                score += 6 if source_kind == "bracket" else 3
 
-        score += overlap * 3
+        score += overlap * 8
+        if overlap == 0:
+            score -= 2
+
         if score > 0:
             domain_scores[domain] += score
             domain_hits[domain] += 1
+            if score > domain_best_mention_score.get(domain, -10**9):
+                domain_best_mention_score[domain] = score
+                domain_best_url[domain] = base_url
 
     if not domain_scores:
         contexts = _contexts_for_brand(brand, text)
         domains = _extract_domains_in_contexts(contexts)
         if len(domains) == 1:
-            return domains[0]
+            return f"https://{domains[0]}"
         return None
 
     ranked = sorted(domain_scores.items(), key=lambda item: (item[1], domain_hits[item[0]]), reverse=True)
     top_domain, top_score = ranked[0]
 
     if len(ranked) == 1:
-        return top_domain
+        return domain_best_url.get(top_domain, f"https://{top_domain}")
 
     second_domain, second_score = ranked[1]
     if top_score == second_score and domain_hits[top_domain] == domain_hits[second_domain]:
         return None
     if top_score - second_score < 2 and top_score < int(second_score * 1.2) + 1:
         return None
-    return top_domain
+    return domain_best_url.get(top_domain, f"https://{top_domain}")
 
 
 def extract_brand_analysis(answer_text: str, raw_text: str | None = None) -> list[BrandResult]:
