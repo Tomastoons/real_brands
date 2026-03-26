@@ -31,6 +31,23 @@ class DomainMention(NamedTuple):
     source_kind: str
 
 
+GENERIC_BRAND_TOKENS = {
+    "app",
+    "apps",
+    "cloud",
+    "device",
+    "family",
+    "find",
+    "live",
+    "location",
+    "map",
+    "maps",
+    "music",
+    "my",
+    "share",
+}
+
+
 def _strip_www_prefix(domain: str) -> str:
     return domain[WWW_PREFIX_LEN:] if domain.lower().startswith(WWW_PREFIX) else domain
 
@@ -116,7 +133,7 @@ def _brand_tokens(brand: str) -> set[str]:
     return {
         token.lower()
         for token in DOMAIN_TOKEN_SPLIT_PATTERN.findall(brand)
-        if len(token) > 1
+        if len(token) > 1 and token.lower() not in GENERIC_BRAND_TOKENS
     }
 
 
@@ -152,6 +169,10 @@ def get_domain_for_brand(brand: str, text: str) -> str | None:
 
     for mention in domain_mentions:
         overlap = len(brand_token_set & _domain_tokens(mention.domain))
+        # Only keep domains that lexically match the brand (e.g., openai.com for OpenAI).
+        # This prevents assigning citation/article hosts as brand domains.
+        if overlap == 0:
+            continue
         score = 0
 
         for brand_start, brand_end in brand_mentions:
@@ -172,8 +193,6 @@ def get_domain_for_brand(brand: str, text: str) -> str | None:
                 score += BRACKET_ATTACHMENT_BONUS if mention.source_kind == "bracket" else PARENTHESIS_ATTACHMENT_BONUS
 
         score += overlap * OVERLAP_MULTIPLIER
-        if overlap == 0:
-            score += OVERLAP_PENALTY
 
         if score > 0:
             domain_scores[mention.domain] += score
@@ -183,9 +202,7 @@ def get_domain_for_brand(brand: str, text: str) -> str | None:
                 domain_best_url[mention.domain] = mention.base_url
 
     if not domain_scores:
-        contexts = contexts_for_brand(brand, text)
-        domains = _extract_domains_in_contexts(contexts)
-        return f"{DEFAULT_SCHEME}://{domains[0]}" if len(domains) == 1 else None
+        return None
 
     ranked = sorted(domain_scores.items(), key=lambda item: (item[1], domain_hits[item[0]]), reverse=True)
     top_domain, top_score = ranked[0]
