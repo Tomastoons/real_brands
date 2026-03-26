@@ -212,12 +212,6 @@ Arguments:
 python -m scripts.prepare_spacy_brand_data --llm-chats llm_chats.json --output training/brand_ner.jsonl
 ```
 
-2. Optionally generate curated user examples:
-
-```bash
-python -m scripts.prepare_user_brand_training_data --output training/user_brand_data.jsonl
-```
-
 3. Train model from prepared training JSONL:
 
 ```bash
