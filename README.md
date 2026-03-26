@@ -106,11 +106,16 @@ If the model path is missing, the app falls back to `en_core_web_lg`.
 
 ## Setup
 
+Requires **Python 3.10+**.
+
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
+python -m spacy download en_core_web_lg
 ```
+
+> `en_core_web_lg` is the base SpaCy model used as a fallback and for training. Skip this if you are using a pre-trained model from the repository.
 
 ## Run Service
 
@@ -128,7 +133,7 @@ pytest
 
 ## Generate Results From Dataset
 
-Put llm_chats.json in the repository root and run:
+Place the provided `llm_chats.json` file (supplied with the task) in the repository root, then run:
 
 ```bash
 python -m scripts.generate_results --input llm_chats.json --output-dir results
@@ -138,6 +143,8 @@ This command reads each dataset record from the expected payload shape,
 calls POST /analysis, and writes output files:
 - results/analysis_0001.json, results/analysis_0002.json, ...
 - results/manifest.json
+
+> The `/results` folder is not pre-populated in the repository. Run this command against your copy of `llm_chats.json` to reproduce the outputs. The service must be running (`uvicorn app.main:app --reload`) before invoking this script.
 
 ## Scripts Reference
 
