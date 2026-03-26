@@ -39,6 +39,8 @@ Small Python backend service that transforms a user question plus a noisy LLM an
 | features | Product features, integrations, APIs, and workflow fit. | "tool calling", "multimodal support" |
 | reliability | Stability, consistency, uptime, and operational trust. | "stable output", "production reliability" |
 | adoption | Market usage, ecosystem strength, and popularity. | "widely adopted", "strong ecosystem" |
+| sentiment | Expressed opinion or evaluation of the brand. | "best option", "disappointing experience" |
+| content_type | Types of content offered or emphasized by the brand. | "exclusive podcast", "hi-fi streaming", "audiobooks" |
 
 ## API
 
@@ -62,7 +64,8 @@ Response:
 			"name": "OpenAI",
 			"mentions_count": 2,
 			"scopes": ["features", "pricing"],
-			"domain": "https://openai.com"
+			"domain": "https://openai.com",
+			"price_tiers": ["free trial", "premium"]
 		}
 	]
 }
@@ -72,6 +75,7 @@ Notes:
 - mentions_count is exact string-mention count for extracted brand names.
 - Brand order is preserved based on first appearance in processed text.
 - domain is inferred dynamically from URL/domain evidence in text using proximity and token-overlap scoring; if evidence is conflicting, domain is null.
+- price_tiers is a deduplicated list of pricing tier labels detected in sentences near the brand (e.g. `"free"`, `"free trial"`, `"premium"`, `"student plan"`, `"family plan"`, `"duo plan"`, `"bundle"`); empty list if none detected.
 
 ## Pre/Post Processing
 

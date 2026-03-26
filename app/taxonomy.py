@@ -77,6 +77,42 @@ SCOPE_TAXONOMY: dict[str, tuple[str, ...]] = {
 		"ecosystem",
 		"dominates",
 	),
+	"sentiment": (
+		"best",
+		"great",
+		"excellent",
+		"outstanding",
+		"impressive",
+		"loved",
+		"recommend",
+		"recommended",
+		"poor",
+		"disappointing",
+		"criticized",
+		"underperforms",
+		"overrated",
+		"preferred",
+		"favorite",
+	),
+	"content_type": (
+		"podcast",
+		"podcasts",
+		"exclusive",
+		"exclusives",
+		"music video",
+		"music videos",
+		"audiobook",
+		"audiobooks",
+		"live",
+		"hi-fi",
+		"hifi",
+		"lossless",
+		"spatial audio",
+		"radio",
+		"lyrics",
+		"album",
+		"playlist",
+	),
 }
 
 SCOPE_ORDER: tuple[str, ...] = tuple(SCOPE_TAXONOMY.keys())
@@ -95,6 +131,18 @@ SCOPE_TAXONOMY_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {
 }
 
 
+# Ordered (label, pattern) pairs for price tier detection near brand mentions.
+PRICE_TIER_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+	("free", re.compile(r"\bfree\s+(?:tier|plan|account|version|access)\b", re.IGNORECASE)),
+	("free trial", re.compile(r"\bfree\s+trial\b", re.IGNORECASE)),
+	("premium", re.compile(r"\bpremium\s*(?:plan|tier|subscription)?\b", re.IGNORECASE)),
+	("student plan", re.compile(r"\bstudent\s+(?:plan|discount|pricing|offer)\b", re.IGNORECASE)),
+	("family plan", re.compile(r"\bfamily\s+plan\b", re.IGNORECASE)),
+	("duo plan", re.compile(r"\bduo\s+plan\b", re.IGNORECASE)),
+	("bundle", re.compile(r"\bbundle\b", re.IGNORECASE)),
+)
+
+
 def get_scopes_from_contexts(contexts: Iterable[str]) -> list[str]:
 	matched: list[str] = []
 	context_list = list(contexts)
@@ -105,3 +153,13 @@ def get_scopes_from_contexts(contexts: Iterable[str]) -> list[str]:
 			matched.append(label)
 
 	return matched
+
+
+def get_price_tiers_from_contexts(contexts: Iterable[str]) -> list[str]:
+	"""Return deduplicated price tier labels found in brand-adjacent sentence contexts."""
+	context_list = list(contexts)
+	return [
+		label
+		for label, pattern in PRICE_TIER_PATTERNS
+		if any(pattern.search(ctx) for ctx in context_list)
+	]

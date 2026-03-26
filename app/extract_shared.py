@@ -1,3 +1,4 @@
+import dataclasses
 from functools import lru_cache
 import os
 from pathlib import Path
@@ -44,6 +45,7 @@ class BrandResult:
     mentions_count: int
     scopes: list[str]
     domain: str | None
+    price_tiers: list[str] = dataclasses.field(default_factory=list)
 
 
 @lru_cache(maxsize=1)

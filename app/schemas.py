@@ -13,6 +13,7 @@ class BrandAnalysis(BaseModel):
     mentions_count: int
     scopes: List[str]
     domain: Optional[str] = None
+    price_tiers: List[str] = []
 
 
 class AnalysisResponse(BaseModel):

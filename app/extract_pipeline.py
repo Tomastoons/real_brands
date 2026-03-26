@@ -1,5 +1,5 @@
 from app.heuristics import BRAND_ENTITY_LABELS
-from app.taxonomy import get_scopes_from_contexts
+from app.taxonomy import get_price_tiers_from_contexts, get_scopes_from_contexts
 from app.extract_candidates import (
     collapse_component_brands,
     count_exact_mentions,
@@ -14,6 +14,11 @@ from app.extract_shared import BrandResult, _get_nlp
 def _get_scopes_for_brand(brand: str, text: str) -> list[str]:
     contexts = contexts_for_brand(brand, text)
     return get_scopes_from_contexts(contexts)
+
+
+def _get_price_tiers_for_brand(brand: str, text: str) -> list[str]:
+    contexts = contexts_for_brand(brand, text)
+    return get_price_tiers_from_contexts(contexts)
 
 
 def extract_brand_analysis(answer_text: str, raw_text: str | None = None) -> list[BrandResult]:
@@ -39,6 +44,7 @@ def extract_brand_analysis(answer_text: str, raw_text: str | None = None) -> lis
             mentions_count=mention_counts[brand],
             scopes=_get_scopes_for_brand(brand, answer_text),
             domain=get_domain_for_brand(brand, answer_text),
+            price_tiers=_get_price_tiers_for_brand(brand, answer_text),
         )
         for brand in ordered_brands
     ]

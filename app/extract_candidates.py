@@ -171,6 +171,7 @@ def merge_canonical_brand_results(results: list[BrandResult]) -> list[BrandResul
                 mentions_count=result.mentions_count,
                 scopes=list(result.scopes),
                 domain=result.domain,
+                price_tiers=list(result.price_tiers),
             )
             continue
 
@@ -180,6 +181,9 @@ def merge_canonical_brand_results(results: list[BrandResult]) -> list[BrandResul
                 existing.scopes.append(scope)
         if existing.domain is None and result.domain is not None:
             existing.domain = result.domain
+        for tier in result.price_tiers:
+            if tier not in existing.price_tiers:
+                existing.price_tiers.append(tier)
 
     return list(merged.values())
 

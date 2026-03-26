@@ -15,6 +15,7 @@ def analyze(question: str, answer: str) -> AnalysisResponse:
 				mentions_count=item.mentions_count,
 				scopes=item.scopes,
 				domain=item.domain,
+				price_tiers=item.price_tiers,
 			)
 			for item in brands
 		]
