@@ -316,3 +316,42 @@ def test_lookup_wikidata_entity_types_uses_local_snapshot() -> None:
 
     assert heuristics.lookup_wikidata_entity_types("Spotify") == (True, False)
     assert heuristics.lookup_wikidata_entity_types("UnknownCandidate") == (None, None)
+
+
+def test_extract_brand_analysis_merges_plan_variants_into_canonical_brand() -> None:
+    answer = (
+        "Spotify Premium is a common paid tier. "
+        "Spotify Student Plan is often cheaper. "
+        "Apple Music Student is also available. "
+        "YouTube Music Premium Student is another option."
+    )
+
+    results = extract_brand_analysis(answer)
+    names = [item.name for item in results]
+
+    assert "Spotify" in names
+    assert "Spotify Premium" not in names
+    assert "Spotify Student Plan" not in names
+    assert "Apple Music" in names
+    assert "Apple Music Student" not in names
+    assert "YouTube Music" in names
+    assert "YouTube Music Premium Student" not in names
+
+    spotify = next(item for item in results if item.name == "Spotify")
+    assert spotify.mentions_count == 2
+
+
+def test_extract_brand_analysis_filters_known_non_brand_noise_terms() -> None:
+    answer = (
+        "Discover Weekly is a playlist feature and AirPlay is a transport protocol. "
+        "SongCatcher and HomePod are not streaming services in this context. "
+        "Spotify remains the service choice."
+    )
+
+    names = [item.name for item in extract_brand_analysis(answer)]
+
+    assert "Discover Weekly" not in names
+    assert "AirPlay" not in names
+    assert "SongCatcher" not in names
+    assert "HomePod" not in names
+    assert "Spotify" in names
