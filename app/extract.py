@@ -28,6 +28,8 @@ STRUCTURAL_LEAD_WORD_PATTERN = re.compile(
 
 CANDIDATE_WORD_PATTERN = re.compile(r"^[A-Za-z0-9&/\-]+$")
 SCOPE_KEYWORDS_LOWER = {keyword.lower() for keywords in SCOPE_TAXONOMY.values() for keyword in keywords}
+DOMAIN_TOKEN_SPLIT_PATTERN = re.compile(r"[A-Za-z0-9]+")
+GENERIC_DOMAIN_TOKENS = {"www", "m", "app", "api", "docs", "blog", "support", "help"}
 
 
 @lru_cache(maxsize=1)
@@ -250,13 +252,132 @@ def _extract_domains_in_contexts(contexts: list[str]) -> list[str]:
     return domains
 
 
-def _get_domain_for_brand(brand: str, text: str) -> str | None:
-    contexts = _contexts_for_brand(brand, text)
-    domains = _extract_domains_in_contexts(contexts)
+def _extract_domain_mentions_with_offsets(text: str) -> list[tuple[str, int, int]]:
+    mentions: list[tuple[str, int, int]] = []
 
-    if len(domains) == 1:
-        return domains[0]
-    return None
+    for match in EXPLICIT_URL_PATTERN.finditer(text):
+        domain = _normalized_domain_from_url(match.group(0))
+        if domain:
+            mentions.append((domain, match.start(), match.end()))
+
+    for match in BRACKET_DOMAIN_PATTERN.finditer(text):
+        domain = match.group(1).lower()
+        if domain.startswith("www."):
+            domain = domain[4:]
+        mentions.append((domain, match.start(1), match.end(1)))
+
+    return mentions
+
+
+def _sentence_spans(text: str) -> list[tuple[int, int]]:
+    spans: list[tuple[int, int]] = []
+    start = 0
+    for match in SENTENCE_SPLIT_PATTERN.finditer(text):
+        end = match.start()
+        if end > start:
+            spans.append((start, end))
+        start = match.end()
+    if start < len(text):
+        spans.append((start, len(text)))
+    return spans
+
+
+def _is_same_sentence(pos_a: int, pos_b: int, sentence_spans: list[tuple[int, int]]) -> bool:
+    for start, end in sentence_spans:
+        if start <= pos_a < end and start <= pos_b < end:
+            return True
+    return False
+
+
+def _brand_tokens(brand: str) -> set[str]:
+    return {
+        token.lower()
+        for token in DOMAIN_TOKEN_SPLIT_PATTERN.findall(brand)
+        if len(token) > 1
+    }
+
+
+def _domain_tokens(domain: str) -> set[str]:
+    parts = domain.lower().split(".")
+    if len(parts) > 1:
+        parts = parts[:-1]
+    if len(parts) > 1 and parts[-1] in {"co", "com", "org", "net", "gov", "edu", "ac"}:
+        parts = parts[:-1]
+
+    tokens: set[str] = set()
+    for part in parts:
+        for token in DOMAIN_TOKEN_SPLIT_PATTERN.findall(part):
+            if len(token) <= 1 or token in GENERIC_DOMAIN_TOKENS:
+                continue
+            tokens.add(token)
+    return tokens
+
+
+def _get_domain_for_brand(brand: str, text: str) -> str | None:
+    brand_pattern = re.compile(rf"\b{re.escape(brand)}\b", flags=re.IGNORECASE)
+    brand_mentions = [(match.start(), match.end()) for match in brand_pattern.finditer(text)]
+    if not brand_mentions:
+        return None
+
+    domain_mentions = _extract_domain_mentions_with_offsets(text)
+    if not domain_mentions:
+        return None
+
+    sentence_spans = _sentence_spans(text)
+    brand_token_set = _brand_tokens(brand)
+    domain_scores: Counter[str] = Counter()
+    domain_hits: Counter[str] = Counter()
+
+    for domain, dom_start, dom_end in domain_mentions:
+        overlap = len(brand_token_set & _domain_tokens(domain))
+        score = 0
+
+        for brand_start, brand_end in brand_mentions:
+            brand_mid = (brand_start + brand_end) // 2
+            domain_mid = (dom_start + dom_end) // 2
+            distance = abs(brand_mid - domain_mid)
+
+            if distance <= 80:
+                score += 4
+            elif distance <= 160:
+                score += 3
+            elif distance <= 300:
+                score += 2
+            elif distance <= 600:
+                score += 1
+
+            if _is_same_sentence(brand_mid, domain_mid, sentence_spans):
+                score += 2
+
+            # Strong positive signal when the domain is attached directly after a brand mention.
+            between = text[brand_end:dom_start].strip()
+            if dom_start >= brand_end and len(between) <= 2 and (between == "[" or between == "("):
+                score += 3
+
+        score += overlap * 3
+        if score > 0:
+            domain_scores[domain] += score
+            domain_hits[domain] += 1
+
+    if not domain_scores:
+        contexts = _contexts_for_brand(brand, text)
+        domains = _extract_domains_in_contexts(contexts)
+        if len(domains) == 1:
+            return domains[0]
+        return None
+
+    ranked = sorted(domain_scores.items(), key=lambda item: (item[1], domain_hits[item[0]]), reverse=True)
+    top_domain, top_score = ranked[0]
+
+    if len(ranked) == 1:
+        return top_domain
+
+    second_domain, second_score = ranked[1]
+    if top_score == second_score and domain_hits[top_domain] == domain_hits[second_domain]:
+        return None
+    if top_score - second_score < 2 and top_score < int(second_score * 1.2) + 1:
+        return None
+    return top_domain
 
 
 def extract_brand_analysis(answer_text: str, raw_text: str | None = None) -> list[BrandResult]:

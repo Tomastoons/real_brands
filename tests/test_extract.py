@@ -36,7 +36,7 @@ def test_extract_brand_analysis_infers_scopes() -> None:
     assert "reliability" in anthropic.scopes
 
 
-def test_extract_brand_analysis_domain_requires_unambiguous_evidence() -> None:
+def test_extract_brand_analysis_domain_prefers_brand_matching_evidence() -> None:
     answer = (
         "Spotify [spotify.com] is popular globally. "
         "OpenAI appears on https://openai.com/docs for API details. "
@@ -48,7 +48,7 @@ def test_extract_brand_analysis_domain_requires_unambiguous_evidence() -> None:
     openai = next(item for item in result if item.name == "OpenAI")
 
     assert spotify.domain == "spotify.com"
-    assert openai.domain is None
+    assert openai.domain == "openai.com"
 
 
 def test_extract_brand_analysis_filters_question_words() -> None:
