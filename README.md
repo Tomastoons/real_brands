@@ -14,9 +14,13 @@ Small Python backend service that transforms a user question plus a noisy LLM an
 |   `-- taxonomy.py          # Scope taxonomy labels and matching keywords
 |-- scripts/
 |   |-- __init__.py
-|   `-- generate_results.py  # Calls POST /analysis for llm_chats.json records
+|   |-- generate_results.py              # Calls POST /analysis for llm_chats.json records
+|   |-- prepare_spacy_brand_data.py      # Builds weakly-labeled BRAND training JSONL from dataset
+|   `-- train_spacy_brand_model.py       # Trains and exports SpaCy NER model
 |-- tests/
 |   |-- test_analysis_api.py
+|   |-- test_extract.py
+|   |-- test_generate_results.py
 |   `-- test_preprocess.py
 |-- results/
 |   `-- .gitkeep
@@ -58,7 +62,7 @@ Response:
 			"name": "OpenAI",
 			"mentions_count": 2,
 			"scopes": ["features", "pricing"],
-			"domain": "openai.com"
+			"domain": "https://openai.com"
 		}
 	]
 }
