@@ -355,3 +355,33 @@ def test_extract_brand_analysis_filters_known_non_brand_noise_terms() -> None:
     assert "SongCatcher" not in names
     assert "HomePod" not in names
     assert "Spotify" in names
+
+
+def test_extract_brand_analysis_sets_null_for_citation_only_domain_evidence() -> None:
+    answer = (
+        "Life360 is a common family locator option. "
+        "Review coverage: https://www.popsci.com/diy/location-sharing-apps/."
+    )
+
+    life360 = next(item for item in extract_brand_analysis(answer) if item.name == "Life360")
+    assert life360.domain is None
+
+
+def test_extract_brand_analysis_ignores_unrelated_link_near_brand() -> None:
+    answer = (
+        "Apple Find My helps Apple households with location sharing. "
+        "Source notes: https://itoolab.com/location/best-location-sharing-app/."
+    )
+
+    item = next(item for item in extract_brand_analysis(answer) if item.name == "Apple Find My")
+    assert item.domain is None
+
+
+def test_extract_brand_analysis_does_not_match_on_generic_music_token() -> None:
+    answer = (
+        "QQ Music is popular in some markets. "
+        "Reference article: https://music.apple.com/us/playlist/example."
+    )
+
+    qq_music = next(item for item in extract_brand_analysis(answer) if item.name == "QQ Music")
+    assert qq_music.domain is None
