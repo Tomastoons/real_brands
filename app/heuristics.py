@@ -15,6 +15,14 @@ WIKIDATA_ENTITY_SNAPSHOT_PATH = Path(__file__).with_name("wikidata_entity_snapsh
 EXCLUDED_NON_BRAND_PHRASES_LOWER = {
     "united states answer",
     "cloud gaming",
+    "student plan",
+    "discover weekly",
+    "songcatcher",
+    "airplay",
+    "homepod",
+    "wi-fi",
+    "wifi",
+    "vpns",
 }
 
 COMMON_NON_BRAND_TERMS = {
