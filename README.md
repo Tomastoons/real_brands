@@ -134,3 +134,104 @@ This command reads each dataset record from the expected payload shape,
 calls POST /analysis, and writes output files:
 - results/analysis_0001.json, results/analysis_0002.json, ...
 - results/manifest.json
+
+## Scripts Reference
+
+### scripts/generate_results.py
+
+Purpose:
+- Batch-runs the API analysis pipeline for each record in `llm_chats.json`.
+- Useful for evaluation snapshots, QA, and assignment deliverables.
+
+Command:
+
+```bash
+python -m scripts.generate_results --input llm_chats.json --output-dir results
+```
+
+Arguments:
+- `--input` (required): path to dataset JSON file.
+- `--output-dir` (required): folder where `analysis_XXXX.json` and `manifest.json` are written.
+
+### scripts/prepare_spacy_brand_data.py
+
+Purpose:
+- Creates weakly-labeled BRAND NER training data from dataset answers.
+- It cleans answer text, extracts brand names with current extraction logic, then writes SpaCy JSONL records.
+
+Command:
+
+```bash
+python -m scripts.prepare_spacy_brand_data --llm-chats llm_chats.json --output training/brand_ner.jsonl --max-records 0
+```
+
+Arguments:
+- `--llm-chats` (default: `llm_chats.json`): input dataset.
+- `--output` (default: `training/brand_ner.jsonl`): output JSONL file for training.
+- `--max-records` (default: `0`): number of records to use (`0` means all).
+
+### scripts/prepare_user_brand_training_data.py
+
+Purpose:
+- Writes curated/user-provided training examples to JSONL.
+- Applies auto-correction for entity spans so data is cleaner for SpaCy NER training.
+
+Command:
+
+```bash
+python -m scripts.prepare_user_brand_training_data --output training/user_brand_data.jsonl
+```
+
+Arguments:
+- `--output` (default: `training/user_brand_data.jsonl`): destination JSONL path.
+
+### scripts/train_spacy_brand_model.py
+
+Purpose:
+- Trains the SpaCy NER model used by the extractor.
+- Saves a model directory that can be loaded by the app via default path or env override.
+
+Command:
+
+```bash
+python -m scripts.train_spacy_brand_model --train-data training/brand_ner.jsonl --output-dir models/brand_ner --base-model en_core_web_lg --iterations 15 --seed 13
+```
+
+Arguments:
+- `--train-data` (default: `training/brand_ner.jsonl`): JSONL training examples.
+- `--output-dir` (default: `models/brand_ner`): where trained model artifacts are saved.
+- `--base-model` (default: `en_core_web_lg`): initial SpaCy model to fine-tune.
+- `--iterations` (default: `15`): number of training epochs.
+- `--seed` (default: `13`): random seed for reproducibility.
+
+## Recommended Training Workflow
+
+1. Generate weak labels from your dataset:
+
+```bash
+python -m scripts.prepare_spacy_brand_data --llm-chats llm_chats.json --output training/brand_ner.jsonl
+```
+
+2. Optionally generate curated user examples:
+
+```bash
+python -m scripts.prepare_user_brand_training_data --output training/user_brand_data.jsonl
+```
+
+3. Train model from prepared training JSONL:
+
+```bash
+python -m scripts.train_spacy_brand_model --train-data training/brand_ner.jsonl --output-dir models/brand_ner
+```
+
+4. Run tests to verify behavior after retraining:
+
+```bash
+pytest
+```
+
+5. Generate dataset outputs with the newly trained model:
+
+```bash
+python -m scripts.generate_results --input llm_chats.json --output-dir results
+```
