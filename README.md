@@ -67,7 +67,7 @@ Response:
 Notes:
 - mentions_count is exact string-mention count for extracted brand names.
 - Brand order is preserved based on first appearance in processed text.
-- domain is only populated when grounded by explicit URL evidence; otherwise null.
+- domain is inferred dynamically from URL/domain evidence in text using proximity and token-overlap scoring; if evidence is conflicting, domain is null.
 
 ## Pre/Post Processing
 
@@ -81,7 +81,24 @@ Post-process behavior:
 - extract ordered brand candidates from cleaned text
 - compute exact mention counts
 - infer taxonomy scopes from sentence-level context keywords
-- infer domain only from explicit URL evidence in brand-local context
+- infer domain dynamically from explicit URL/domain evidence near brand mentions (no static brand-domain dictionary)
+
+## Model Files
+
+The extractor loads a SpaCy model from:
+- `models/brand_ner` (default)
+- or `BRAND_NER_MODEL_PATH` if set
+
+Important:
+- `models/brand_ner/vocab/vectors` is a large file and is tracked with Git LFS.
+- If you clone this repository, install and fetch LFS objects before running the app:
+
+```bash
+git lfs install
+git lfs pull
+```
+
+If the model path is missing, the app falls back to `en_core_web_lg`.
 
 ## Setup
 
@@ -102,6 +119,8 @@ uvicorn app.main:app --reload
 ```bash
 pytest
 ```
+
+`pytest.ini` is configured so tests resolve local imports from the repository root.
 
 ## Generate Results From Dataset
 
