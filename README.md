@@ -157,7 +157,7 @@ pytest
 Place the provided `llm_chats.json` file (supplied with the task) in the repository root, then run:
 
 ```bash
-python -m scripts.generate_results --input llm_chats.json --output-dir results
+python -m scripts.generate_results --input llm_chats.json --output-dir results --auto-tune
 ```
 
 This command reads each dataset record from the expected payload shape,
@@ -178,12 +178,15 @@ Purpose:
 Command:
 
 ```bash
-python -m scripts.generate_results --input llm_chats.json --output-dir results
+python -m scripts.generate_results --input llm_chats.json --output-dir results --auto-tune
 ```
 
 Arguments:
 - `--input` (required): path to dataset JSON file.
 - `--output-dir` (required): folder where `analysis_XXXX.json` and `manifest.json` are written.
+- `--workers` (default: `1`): process worker count for parallel analysis. Set `>1` for bulk runs.
+- `--chunk-size` (default: `32`): number of records grouped per process task when `--workers > 1`.
+- `--auto-tune` (optional): automatically selects worker and chunk settings from dataset size and available CPUs.
 
 ### scripts/prepare_spacy_brand_data.py
 
