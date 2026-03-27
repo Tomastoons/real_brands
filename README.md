@@ -5,28 +5,45 @@ Small Python backend service that transforms a user question plus a noisy LLM an
 
 ```text
 .
+|-- llm_chats.json
+|-- pytest.ini
+|-- README.md
+|-- requirements.txt
 |-- app/
 |   |-- __init__.py
 |   |-- main.py              # FastAPI app and HTTP routes
-|   |-- schemas.py           # Typed Pydantic models
-|   |-- preprocess.py        # Pre-processing pipeline
 |   |-- extract.py           # Brand extraction + post-processing
+|   |-- extract_candidates.py
+|   |-- extract_domains.py
+|   |-- extract_pipeline.py
+|   |-- extract_shared.py
+|   |-- heuristics.py
+|   |-- preprocess.py        # Pre-processing pipeline
+|   |-- schemas.py           # Typed Pydantic models
+|   |-- service.py
 |   `-- taxonomy.py          # Scope taxonomy labels and matching keywords
 |-- scripts/
 |   |-- __init__.py
-|   |-- generate_results.py              # Calls POST /analysis for llm_chats.json records
-|   |-- prepare_spacy_brand_data.py      # Builds weakly-labeled BRAND training JSONL from dataset
-|   `-- train_spacy_brand_model.py       # Trains and exports SpaCy NER model
+|   |-- generate_results.py
+|   |-- prepare_spacy_brand_data.py
+|   `-- train_spacy_brand_model.py
 |-- tests/
 |   |-- test_analysis_api.py
 |   |-- test_extract.py
 |   |-- test_generate_results.py
-|   `-- test_preprocess.py
+|   |-- test_preprocess.py
+|   `-- test_taxonomy.py
+|-- training/
+|   `-- brand_ner.jsonl
+|-- models/
+|   `-- brand_ner/
 |-- results/
-|   `-- .gitkeep
-|-- requirements.txt
-|-- pytest.ini
-`-- README.md
+|   |-- analysis_0001.json
+|   |-- analysis_0002.json
+|   |-- ...
+|   `-- analysis_00xx.json
+`-- app/models/
+	`-- brand_ner/
 ```
 
 ## Scope Taxonomy
